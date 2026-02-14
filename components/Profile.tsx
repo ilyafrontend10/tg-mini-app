@@ -1,64 +1,91 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import WebApp from '@twa-dev/sdk'
+import { useLayoutEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import WebApp from "@twa-dev/sdk";
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: typeof WebApp;
+    };
+  }
+}
 
 interface User {
-  id: number
-  first_name: string
-  last_name?: string
-  username?: string
-  language_code?: string
-  photo_url?: string
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+  photo_url?: string;
+}
+
+interface AppState {
+  user: User | null;
+  webApp: typeof WebApp | null;
 }
 
 export default function Profile() {
-  const [user, setUser] = useState<User | null>(null)
-  const [webApp, setWebApp] = useState<any>(null)
+  const [state, setState] = useState<AppState>({
+    user: null,
+    webApp: null,
+  });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Инициализация Telegram Web App
-    if (typeof window !== 'undefined') {
-      const tg = WebApp
-      tg.ready()
-      tg.expand()
-      setWebApp(tg)
+    if (typeof window !== "undefined") {
+      try {
+        const tg = WebApp;
+        tg.ready();
+        tg.expand();
 
-      // Получение данных пользователя
-      if (tg.initDataUnsafe.user) {
-        setUser(tg.initDataUnsafe.user)
+        // Получение данных пользователя
+        const userData = tg.initDataUnsafe?.user || null;
+
+        // Используем setTimeout для отложенного обновления состояния
+        setTimeout(() => {
+          setState({
+            webApp: tg,
+            user: userData,
+          });
+        }, 0);
+      } catch (error) {
+        console.error("Ошибка инициализации Telegram Web App:", error);
       }
     }
-  }, [])
+  }, []);
 
   const handleShowAlert = () => {
-    if (webApp) {
-      webApp.showAlert('Привет из Telegram Mini App!')
+    if (state.webApp) {
+      state.webApp.showAlert("Привет из Telegram Mini App!");
     }
-  }
+  };
 
   const handleShare = () => {
-    if (webApp) {
-      webApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent('Посмотри мой профиль!')}`)
+    if (state.webApp && typeof window !== "undefined") {
+      try {
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent("Посмотри мой профиль!")}`;
+        state.webApp.openTelegramLink(shareUrl);
+      } catch (error) {
+        console.error("Ошибка при открытии ссылки:", error);
+      }
     }
-  }
+  };
 
-  if (!user) {
+  if (!state.user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Загрузка...</CardTitle>
-            <CardDescription>
-              Пожалуйста, откройте это приложение в Telegram
-            </CardDescription>
+            <CardDescription>Пожалуйста, откройте это приложение в Telegram</CardDescription>
           </CardHeader>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -72,30 +99,26 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={user.photo_url} alt={user.first_name} />
+                <AvatarImage src={state.user.photo_url} alt={state.user.first_name} />
                 <AvatarFallback className="text-2xl">
-                  {user.first_name.charAt(0).toUpperCase()}
+                  {state.user.first_name?.charAt(0)?.toUpperCase() || "?"}
                 </AvatarFallback>
               </Avatar>
-              
+
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold">
-                  {user.first_name} {user.last_name || ''}
+                  {state.user.first_name} {state.user.last_name || ""}
                 </h2>
-                {user.username && (
-                  <p className="text-gray-600">@{user.username}</p>
-                )}
-                <p className="text-sm text-gray-500">
-                  ID: {user.id}
-                </p>
-                {user.language_code && (
+                {state.user.username && <p className="text-gray-600">@{state.user.username}</p>}
+                <p className="text-sm text-gray-500">ID: {state.user.id}</p>
+                {state.user.language_code && (
                   <p className="text-sm text-gray-500">
-                    Язык: {user.language_code.toUpperCase()}
+                    Язык: {state.user.language_code?.toUpperCase() || "Неизвестно"}
                   </p>
                 )}
               </div>
             </div>
-            
+
             <div className="flex flex-col space-y-2 pt-4">
               <Button onClick={handleShowAlert} className="w-full">
                 Показать уведомление
@@ -106,20 +129,26 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Информация о приложении</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <p><strong>Платформа:</strong> {webApp?.platform || 'Неизвестно'}</p>
-              <p><strong>Версия:</strong> {webApp?.version || 'Неизвестно'}</p>
-              <p><strong>Цветовая тема:</strong> {webApp?.colorScheme || 'light'}</p>
+              <p>
+                <strong>Платформа:</strong> {state.webApp?.platform || "Неизвестно"}
+              </p>
+              <p>
+                <strong>Версия:</strong> {state.webApp?.version || "Неизвестно"}
+              </p>
+              <p>
+                <strong>Цветовая тема:</strong> {state.webApp?.colorScheme || "light"}
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
