@@ -1,5 +1,5 @@
-import Profile from "@/components/Profile";
+import TechStore from "@/components/TechStore";
 
 export default function Home() {
-  return <Profile />;
+  return <TechStore />;
 }

@@ -37,10 +37,8 @@ export default function Profile() {
   });
 
   useLayoutEffect(() => {
-    // Проверяем, открыто ли приложение в Telegram
     const isTelegramEnvironment = typeof window !== "undefined" && window.Telegram?.WebApp;
 
-    // Если не Telegram, сразу устанавливаем демо-данные
     if (!isTelegramEnvironment && typeof window !== "undefined") {
       const demoUser: User = {
         id: 12345,
@@ -51,39 +49,31 @@ export default function Profile() {
         photo_url: undefined,
       };
 
-      setTimeout(() => {
-        setState({
-          webApp: null,
-          user: demoUser,
-          isTelegram: false,
-        });
-      }, 0);
+      setState({
+        webApp: null,
+        user: demoUser,
+        isTelegram: false,
+      });
       return;
     }
 
     if (typeof window !== "undefined") {
       try {
-        // Инициализация в Telegram (только для Telegram)
         const tg = WebApp;
         tg.ready();
         tg.expand();
 
-        // Получение данных пользователя
         const userData = tg.initDataUnsafe?.user || null;
         console.log("Telegram WebApp инициализирован:", tg);
         console.log("Данные пользователя:", userData);
 
-        // Используем setTimeout для отложенного обновления состояния
-        setTimeout(() => {
-          setState({
-            webApp: tg,
-            user: userData,
-            isTelegram: true,
-          });
-        }, 0);
+        setState({
+          webApp: tg,
+          user: userData,
+          isTelegram: true,
+        });
       } catch (error) {
         console.error("Ошибка инициализации:", error);
-        // В случае ошибки показываем демо-данные
         const demoUser: User = {
           id: 12345,
           first_name: "Demo",
@@ -92,13 +82,11 @@ export default function Profile() {
           language_code: "ru",
         };
 
-        setTimeout(() => {
-          setState({
-            webApp: null,
-            user: demoUser,
-            isTelegram: false,
-          });
-        }, 0);
+        setState({
+          webApp: null,
+          user: demoUser,
+          isTelegram: false,
+        });
       }
     }
   }, []);
@@ -120,7 +108,6 @@ export default function Profile() {
         console.error("Ошибка при открытии ссылки:", error);
       }
     } else if (typeof window !== "undefined") {
-      // Web Share API для обычных браузеров
       if (navigator.share) {
         navigator
           .share({
@@ -130,7 +117,6 @@ export default function Profile() {
           })
           .catch(console.error);
       } else {
-        // Fallback - копирование в буфер обмена
         navigator.clipboard
           .writeText(window.location.href)
           .then(() => {
