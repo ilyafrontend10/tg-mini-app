@@ -16,6 +16,7 @@ import {
   getTotalItems,
 } from "@/lib/cart";
 import { Badge } from "./ui/badge";
+import ProductModal from "@/components/ProductModal";
 
 declare global {
   interface Window {
@@ -41,6 +42,8 @@ interface AppState {
   isLoading: boolean;
   cart: CartItem[];
   selectedCategory: string;
+  selectedProduct: Product | null;
+  isModalOpen: boolean;
 }
 
 export default function TechStore() {
@@ -51,6 +54,8 @@ export default function TechStore() {
     isLoading: true,
     cart: [],
     selectedCategory: "all",
+    selectedProduct: null,
+    isModalOpen: false,
   });
 
   useLayoutEffect(() => {
@@ -74,6 +79,8 @@ export default function TechStore() {
           isLoading: false,
           cart: [],
           selectedCategory: "all",
+          selectedProduct: null,
+          isModalOpen: false,
         });
         return;
       }
@@ -95,6 +102,8 @@ export default function TechStore() {
             isLoading: false,
             cart: [],
             selectedCategory: "all",
+            selectedProduct: null,
+            isModalOpen: false,
           });
         } catch (error) {
           console.error("Ошибка инициализации:", error);
@@ -113,6 +122,8 @@ export default function TechStore() {
             isLoading: false,
             cart: [],
             selectedCategory: "all",
+            selectedProduct: null,
+            isModalOpen: false,
           });
         }
       }
@@ -140,6 +151,29 @@ export default function TechStore() {
       ...prev,
       cart: updateQuantity(prev.cart, productId, quantity),
     }));
+  };
+
+  const handleProductClick = (product: Product) => {
+    setState((prev) => ({
+      ...prev,
+      selectedProduct: product,
+      isModalOpen: true,
+    }));
+  };
+
+  const handleCloseModal = () => {
+    setState((prev) => ({
+      ...prev,
+      isModalOpen: false,
+    }));
+    setTimeout(() => {
+      setState((prev) => ({ ...prev, selectedProduct: null }));
+    }, 300);
+  };
+
+  const getQuantityInCart = (productId: number) => {
+    const item = state.cart.find((item) => item.id === productId);
+    return item ? item.quantity : 0;
   };
 
   const filteredProducts =
@@ -244,7 +278,11 @@ export default function TechStore() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
-              <Card key={product.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={product.id}
+                className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
+                onClick={() => handleProductClick(product)}
+              >
                 <CardHeader className="pb-2">
                   <div className="text-4xl text-center mb-2">{product.image}</div>
                   <CardTitle className="text-base">{product.name}</CardTitle>
@@ -261,7 +299,10 @@ export default function TechStore() {
                     className="w-full"
                     size="sm"
                     disabled={!product.inStock}
-                    onClick={() => handleAddToCart(product)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(product);
+                    }}
                   >
                     {product.inStock ? "В корзину" : "Недоступно"}
                   </Button>
@@ -329,6 +370,15 @@ export default function TechStore() {
           </Card>
         )}
       </div>
+
+      <ProductModal
+        product={state.selectedProduct}
+        isOpen={state.isModalOpen}
+        onClose={handleCloseModal}
+        onAddToCart={handleAddToCart}
+        quantity={state.selectedProduct ? getQuantityInCart(state.selectedProduct.id) : 0}
+        onUpdateQuantity={handleUpdateQuantity}
+      />
     </div>
   );
 }
