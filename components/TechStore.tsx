@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,6 +38,7 @@ interface AppState {
   user: User | null;
   webApp: typeof WebApp | null;
   isTelegram: boolean;
+  isLoading: boolean;
   cart: CartItem[];
   selectedCategory: string;
 }
@@ -46,69 +48,77 @@ export default function TechStore() {
     user: null,
     webApp: null,
     isTelegram: false,
+    isLoading: true,
     cart: [],
     selectedCategory: "all",
   });
 
   useLayoutEffect(() => {
-    const isTelegramEnvironment = typeof window !== "undefined" && window.Telegram?.WebApp;
+    const initializeApp = () => {
+      const isTelegramEnvironment = typeof window !== "undefined" && window.Telegram?.WebApp;
 
-    if (!isTelegramEnvironment && typeof window !== "undefined") {
-      const demoUser: User = {
-        id: 12345,
-        first_name: "Demo",
-        last_name: "User",
-        username: "demo_user",
-        language_code: "ru",
-        photo_url: undefined,
-      };
-
-      setState({
-        webApp: null,
-        user: demoUser,
-        isTelegram: false,
-        cart: [],
-        selectedCategory: "all",
-      });
-      return;
-    }
-
-    if (typeof window !== "undefined") {
-      try {
-        const tg = WebApp;
-        tg.ready();
-        tg.expand();
-
-        const userData = tg.initDataUnsafe?.user || null;
-        console.log("Telegram WebApp инициализирован:", tg);
-        console.log("Данные пользователя:", userData);
-
-        setState({
-          webApp: tg,
-          user: userData,
-          isTelegram: true,
-          cart: [],
-          selectedCategory: "all",
-        });
-      } catch (error) {
-        console.error("Ошибка инициализации:", error);
+      if (!isTelegramEnvironment && typeof window !== "undefined") {
         const demoUser: User = {
           id: 12345,
           first_name: "Demo",
           last_name: "User",
           username: "demo_user",
           language_code: "ru",
+          photo_url: undefined,
         };
 
         setState({
           webApp: null,
           user: demoUser,
           isTelegram: false,
+          isLoading: false,
           cart: [],
           selectedCategory: "all",
         });
+        return;
       }
-    }
+
+      if (typeof window !== "undefined") {
+        try {
+          const tg = WebApp;
+          tg.ready();
+          tg.expand();
+
+          const userData = tg.initDataUnsafe?.user || null;
+          console.log("Telegram WebApp инициализирован:", tg);
+          console.log("Данные пользователя:", userData);
+
+          setState({
+            webApp: tg,
+            user: userData,
+            isTelegram: true,
+            isLoading: false,
+            cart: [],
+            selectedCategory: "all",
+          });
+        } catch (error) {
+          console.error("Ошибка инициализации:", error);
+          const demoUser: User = {
+            id: 12345,
+            first_name: "Demo",
+            last_name: "User",
+            username: "demo_user",
+            language_code: "ru",
+          };
+
+          setState({
+            webApp: null,
+            user: demoUser,
+            isTelegram: false,
+            isLoading: false,
+            cart: [],
+            selectedCategory: "all",
+          });
+        }
+      }
+    };
+
+    initializeApp();
   }, []);
 
   const handleAddToCart = (product: Product) => {
@@ -137,13 +147,26 @@ export default function TechStore() {
       ? products
       : products.filter((product) => product.category === state.selectedCategory);
 
-  if (!state.user) {
+  if (state.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Загрузка...</CardTitle>
             <CardDescription>Инициализация приложения...</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!state.user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Ошибка</CardTitle>
+            <CardDescription>Не удалось загрузить данные пользователя</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -165,6 +188,11 @@ export default function TechStore() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Link href="/">
+                <Button variant="ghost" size="sm">
+                  🏠
+                </Button>
+              </Link>
               {state.user && (
                 <div className="flex items-center space-x-2">
                   <Avatar className="w-8 h-8">

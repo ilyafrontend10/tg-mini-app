@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface AppState {
   user: User | null;
   webApp: typeof WebApp | null;
   isTelegram: boolean;
+  isLoading: boolean;
 }
 
 export default function Profile() {
@@ -34,61 +36,69 @@ export default function Profile() {
     user: null,
     webApp: null,
     isTelegram: false,
+    isLoading: true,
   });
 
   useLayoutEffect(() => {
-    const isTelegramEnvironment = typeof window !== "undefined" && window.Telegram?.WebApp;
+    const initializeApp = () => {
+      const isTelegramEnvironment = typeof window !== "undefined" && window.Telegram?.WebApp;
 
-    if (!isTelegramEnvironment && typeof window !== "undefined") {
-      const demoUser: User = {
-        id: 12345,
-        first_name: "Demo",
-        last_name: "User",
-        username: "demo_user",
-        language_code: "ru",
-        photo_url: undefined,
-      };
-
-      setState({
-        webApp: null,
-        user: demoUser,
-        isTelegram: false,
-      });
-      return;
-    }
-
-    if (typeof window !== "undefined") {
-      try {
-        const tg = WebApp;
-        tg.ready();
-        tg.expand();
-
-        const userData = tg.initDataUnsafe?.user || null;
-        console.log("Telegram WebApp инициализирован:", tg);
-        console.log("Данные пользователя:", userData);
-
-        setState({
-          webApp: tg,
-          user: userData,
-          isTelegram: true,
-        });
-      } catch (error) {
-        console.error("Ошибка инициализации:", error);
+      if (!isTelegramEnvironment && typeof window !== "undefined") {
         const demoUser: User = {
           id: 12345,
           first_name: "Demo",
           last_name: "User",
           username: "demo_user",
           language_code: "ru",
+          photo_url: undefined,
         };
 
         setState({
           webApp: null,
           user: demoUser,
           isTelegram: false,
+          isLoading: false,
         });
+        return;
       }
-    }
+
+      if (typeof window !== "undefined") {
+        try {
+          const tg = WebApp;
+          tg.ready();
+          tg.expand();
+
+          const userData = tg.initDataUnsafe?.user || null;
+          console.log("Telegram WebApp инициализирован:", tg);
+          console.log("Данные пользователя:", userData);
+
+          setState({
+            webApp: tg,
+            user: userData,
+            isTelegram: true,
+            isLoading: false,
+          });
+        } catch (error) {
+          console.error("Ошибка инициализации:", error);
+          const demoUser: User = {
+            id: 12345,
+            first_name: "Demo",
+            last_name: "User",
+            username: "demo_user",
+            language_code: "ru",
+          };
+
+          setState({
+            webApp: null,
+            user: demoUser,
+            isTelegram: false,
+            isLoading: false,
+          });
+        }
+      }
+    };
+
+    initializeApp();
   }, []);
 
   const handleShowAlert = () => {
@@ -129,7 +139,7 @@ export default function Profile() {
     }
   };
 
-  if (!state.user) {
+  if (state.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -142,9 +152,30 @@ export default function Profile() {
     );
   }
 
+  if (!state.user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Ошибка</CardTitle>
+            <CardDescription>Не удалось загрузить данные пользователя</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-md mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Профиль</h1>
+          <Link href="/">
+            <Button variant="ghost" size="sm">
+              🏠
+            </Button>
+          </Link>
+        </div>
         <Card>
           <CardHeader className="text-center">
             <CardTitle>Профиль пользователя</CardTitle>
